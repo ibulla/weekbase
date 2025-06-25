@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Working Hours Beat</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; }
+  table { border-collapse: collapse; width: 100%; max-width: 600px; }
+  th, td { padding: 8px; border: 1px solid #ccc; }
+  input[type="text"] { width: 100%; }
+  button { margin-top: 10px; }
+</style>
+</head>
+<body>
+<h1>Weekly Working Hours</h1>
+<table>
+  <tr><th>Day</th><th>Hours (e.g. 8:30-11:45, 14:30-19:00)</th></tr>
+  <tr><td>Monday</td><td><input type="text" id="mon"></td></tr>
+  <tr><td>Tuesday</td><td><input type="text" id="tue"></td></tr>
+  <tr><td>Wednesday</td><td><input type="text" id="wed"></td></tr>
+  <tr><td>Thursday</td><td><input type="text" id="thu"></td></tr>
+  <tr><td>Friday</td><td><input type="text" id="fri"></td></tr>
+  <tr><td>Saturday</td><td><input type="text" id="sat"></td></tr>
+  <tr><td>Sunday</td><td><input type="text" id="sun"></td></tr>
+</table>
+<button id="play">Create Beat</button>
+
+<script>
+function parseIntervals(text) {
+  if (!text) return [];
+  return text.split(',').map(interval => {
+    const [start, end] = interval.split('-').map(s => s.trim());
+    return {start, end};
+  });
+}
+
+function timeToMinutes(t) {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function scheduleBeat(audioCtx, when) {
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.frequency.value = 440;
+  gain.gain.setValueAtTime(0.0001, when);
+  gain.gain.exponentialRampToValueAtTime(0.5, when + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, when + 0.2);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(when);
+  osc.stop(when + 0.2);
+}
+
+function createBeat() {
+  const days = ['mon','tue','wed','thu','fri','sat','sun'];
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  let current = audioCtx.currentTime;
+  days.forEach(id => {
+    const intervals = parseIntervals(document.getElementById(id).value);
+    intervals.forEach(({start, end}) => {
+      const sMin = timeToMinutes(start);
+      const eMin = timeToMinutes(end);
+      for (let t = sMin; t < eMin; t += 30) { // 30 min steps
+        scheduleBeat(audioCtx, current);
+        current += 0.3; // spacing between beats
+      }
+    });
+  });
+}
+
+document.getElementById('play').addEventListener('click', createBeat);
+</script>
+</body>
+</html>
