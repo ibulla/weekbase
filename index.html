@@ -25,6 +25,7 @@
   <tr><td>Sunday</td><td><div class="slots" id="sun"></div></td></tr>
 </table>
 <button id="play">Create Beat</button>
+<button id="stop">Stop</button>
 
 <script>
 const days = ['mon','tue','wed','thu','fri','sat','sun'];
@@ -65,19 +66,49 @@ function scheduleBeat(audioCtx, when) {
   osc.stop(when + 0.2);
 }
 
-function createBeat() {
-  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+let audioCtx;
+let loopId;
+
+function playSequence() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
   let current = audioCtx.currentTime;
+  const selected = [];
   days.forEach(id => {
     const container = document.getElementById(id);
     container.querySelectorAll('input[type=checkbox]:checked').forEach(cb => {
-      scheduleBeat(audioCtx, current);
-      current += 0.3;
+      selected.push(cb);
     });
   });
+  selected.forEach(() => {
+    scheduleBeat(audioCtx, current);
+    current += 0.3;
+  });
+  return selected.length * 0.3;
 }
 
-document.getElementById('play').addEventListener('click', createBeat);
+function startLoop() {
+  stopLoop();
+  const duration = playSequence();
+  if (duration > 0) {
+    loopId = setInterval(playSequence, duration * 1000);
+  }
+}
+
+function stopLoop() {
+  if (loopId) {
+    clearInterval(loopId);
+    loopId = null;
+  }
+  if (audioCtx) {
+    audioCtx.close();
+    audioCtx = null;
+  }
+}
+
+document.getElementById('play').addEventListener('click', startLoop);
+document.getElementById('stop').addEventListener('click', stopLoop);
 window.addEventListener('load', createCheckboxes);
 </script>
 </body>
