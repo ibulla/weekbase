@@ -7,37 +7,51 @@
   body { font-family: Arial, sans-serif; padding: 20px; }
   table { border-collapse: collapse; width: 100%; max-width: 600px; }
   th, td { padding: 8px; border: 1px solid #ccc; }
-  input[type="text"] { width: 100%; }
+  .slots { display: flex; flex-wrap: wrap; gap: 4px; }
+  .slots label { font-size: 12px; margin-right: 4px; }
   button { margin-top: 10px; }
 </style>
 </head>
 <body>
 <h1>Weekly Working Hours</h1>
 <table>
-  <tr><th>Day</th><th>Hours (e.g. 8:30-11:45, 14:30-19:00)</th></tr>
-  <tr><td>Monday</td><td><input type="text" id="mon"></td></tr>
-  <tr><td>Tuesday</td><td><input type="text" id="tue"></td></tr>
-  <tr><td>Wednesday</td><td><input type="text" id="wed"></td></tr>
-  <tr><td>Thursday</td><td><input type="text" id="thu"></td></tr>
-  <tr><td>Friday</td><td><input type="text" id="fri"></td></tr>
-  <tr><td>Saturday</td><td><input type="text" id="sat"></td></tr>
-  <tr><td>Sunday</td><td><input type="text" id="sun"></td></tr>
+  <tr><th>Day</th><th>Half-hour slots</th></tr>
+  <tr><td>Monday</td><td><div class="slots" id="mon"></div></td></tr>
+  <tr><td>Tuesday</td><td><div class="slots" id="tue"></div></td></tr>
+  <tr><td>Wednesday</td><td><div class="slots" id="wed"></div></td></tr>
+  <tr><td>Thursday</td><td><div class="slots" id="thu"></div></td></tr>
+  <tr><td>Friday</td><td><div class="slots" id="fri"></div></td></tr>
+  <tr><td>Saturday</td><td><div class="slots" id="sat"></div></td></tr>
+  <tr><td>Sunday</td><td><div class="slots" id="sun"></div></td></tr>
 </table>
 <button id="play">Create Beat</button>
 
 <script>
-function parseIntervals(text) {
-  if (!text) return [];
-  return text.split(',').map(interval => {
-    const [start, end] = interval.split('-').map(s => s.trim());
-    return {start, end};
+const days = ['mon','tue','wed','thu','fri','sat','sun'];
+
+function createCheckboxes() {
+  const times = [];
+  for (let h = 0; h < 24; h++) {
+    for (let m = 0; m < 60; m += 30) {
+      const hh = String(h).padStart(2,'0');
+      const mm = String(m).padStart(2,'0');
+      times.push(`${hh}:${mm}`);
+    }
+  }
+  days.forEach(id => {
+    const container = document.getElementById(id);
+    times.forEach(t => {
+      const label = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = t;
+      label.appendChild(cb);
+      label.appendChild(document.createTextNode(' ' + t));
+      container.appendChild(label);
+    });
   });
 }
 
-function timeToMinutes(t) {
-  const [h, m] = t.split(':').map(Number);
-  return h * 60 + m;
-}
 
 function scheduleBeat(audioCtx, when) {
   const osc = audioCtx.createOscillator();
@@ -52,23 +66,19 @@ function scheduleBeat(audioCtx, when) {
 }
 
 function createBeat() {
-  const days = ['mon','tue','wed','thu','fri','sat','sun'];
   const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   let current = audioCtx.currentTime;
   days.forEach(id => {
-    const intervals = parseIntervals(document.getElementById(id).value);
-    intervals.forEach(({start, end}) => {
-      const sMin = timeToMinutes(start);
-      const eMin = timeToMinutes(end);
-      for (let t = sMin; t < eMin; t += 30) { // 30 min steps
-        scheduleBeat(audioCtx, current);
-        current += 0.3; // spacing between beats
-      }
+    const container = document.getElementById(id);
+    container.querySelectorAll('input[type=checkbox]:checked').forEach(cb => {
+      scheduleBeat(audioCtx, current);
+      current += 0.3;
     });
   });
 }
 
 document.getElementById('play').addEventListener('click', createBeat);
+window.addEventListener('load', createCheckboxes);
 </script>
 </body>
 </html>
